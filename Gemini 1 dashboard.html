@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Engagement Dashboard 2026</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Prompt', sans-serif; background: #f0f2f5; min-height: 100vh; }
+        
+        .header {
+            background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%);
+            color: white;
+            padding: 20px 32px;
+        }
+        .header h1 { font-size: 1.5rem; font-weight: 600; }
+        .header .subtitle { opacity: 0.9; font-size: 0.9rem; margin-top: 4px; }
+        
+        .upload-section { background: white; padding: 20px 32px; border-bottom: 1px solid #e0e0e0; }
+        .upload-section label { font-weight: 500; margin-right: 12px; }
+        .file-input-wrapper { display: inline-block; }
+        .file-input-wrapper input { display: none; }
+        .file-btn {
+            background: #3949ab; color: white; padding: 10px 20px; border-radius: 6px;
+            cursor: pointer; display: inline-block; font-weight: 500;
+        }
+        .file-btn:hover { background: #303f9f; }
+        .file-name { margin-left: 12px; color: #666; font-size: 0.9rem; }
+        
+        .stats-bar { background: white; padding: 16px 32px; display: flex; gap: 32px; flex-wrap: wrap; border-bottom: 1px solid #e0e0e0; }
+        .stat-item { display: flex; align-items: center; gap: 8px; }
+        .stat-item .label { color: #666; font-size: 0.9rem; }
+        .stat-item .value { font-weight: 700; color: #1a237e; font-size: 1.1rem; }
+        
+        .dashboard { padding: 24px 32px; }
+        
+        .bento-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        
+        .bento-card {
+            background: white; border-radius: 16px; padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .bento-card.kpi { grid-column: span 1; text-align: center; padding: 24px 16px; }
+        .bento-card.chart { grid-column: span 2; }
+        .bento-card.chart-wide { grid-column: span 4; }
+        .bento-card.full { grid-column: span 4; }
+        
+        .kpi-value { font-size: 2.5rem; font-weight: 700; color: #1a237e; }
+        .kpi-label { color: #666; font-size: 0.9rem; margin-top: 8px; }
+        
+        .card-title { font-size: 1rem; font-weight: 600; color: #333; margin-bottom: 16px; }
+        
+        .dimension-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
+        .dimension-item { text-align: center; padding: 16px 8px; border-radius: 12px; background: #f8f9fa; }
+        .dimension-score { font-size: 1.6rem; font-weight: 700; }
+        .dimension-name { font-size: 0.75rem; color: #666; margin-top: 4px; }
+        
+        .chart-container { position: relative; height: 280px; }
+        
+        .heatmap-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+        .heatmap-item { padding: 10px 6px; border-radius: 8px; text-align: center; color: white; }
+        .heatmap-label { font-size: 0.65rem; font-weight: 500; }
+        .heatmap-value { font-size: 1.2rem; font-weight: 700; }
+        
+        .rank-list { margin-top: 8px; }
+        .rank-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .rank-dimension { font-size: 0.85rem; color: #333; }
+        .rank-score { font-weight: 700; }
+        
+        .insights-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        .insight-card { padding: 16px; border-radius: 12px; border-left: 4px solid; }
+        .insight-card.danger { background: #ffebee; border-color: #f44336; }
+        .insight-card.warning { background: #fff3e0; border-color: #ff9800; }
+        .insight-card.success { background: #e8f5e9; border-color: #4caf50; }
+        .insight-card.info { background: #e3f2fd; border-color: #2196f3; }
+        .insight-card-title { font-weight: 600; margin-bottom: 8px; font-size: 0.9rem; }
+        .insight-card.danger .insight-card-title { color: #c62828; }
+        .insight-card.warning .insight-card-title { color: #e65100; }
+        .insight-card.success .insight-card-title { color: #2e7d32; }
+        .insight-card.info .insight-card-title { color: #1565c0; }
+        .insight-card-text { font-size: 0.85rem; color: #333; }
+        .insight-metric { background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+        
+        .recommendations-section { margin-top: 20px; }
+        .recommendation-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid #eee; }
+        .recommendation-number {
+            width: 26px; height: 26px; background: #3949ab; color: white;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: 600; font-size: 0.8rem; flex-shrink: 0;
+        }
+        .recommendation-title { font-weight: 600; color: #333; margin-bottom: 4px; font-size: 0.9rem; }
+        .recommendation-desc { font-size: 0.85rem; color: #666; }
+        
+        .empty-state { text-align: center; padding: 80px; color: #999; }
+        .empty-state .icon { font-size: 4rem; margin-bottom: 16px; }
+        
+        @media (max-width: 1200px) {
+            .bento-grid { grid-template-columns: repeat(2, 1fr); }
+            .bento-card.chart-wide, .bento-card.full { grid-column: span 2; }
+            .dimension-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .bento-grid { grid-template-columns: 1fr; }
+            .bento-card.kpi, .bento-card.chart, .bento-card.chart-wide, .bento-card.full { grid-column: span 1; }
+            .dimension-grid { grid-template-columns: repeat(2, 1fr); }
+            .heatmap-grid { grid-template-columns: repeat(5, 1fr); }
+            .insights-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Employee Engagement Dashboard 2026</h1>
+        <div class="subtitle">สำหรับผู้บริหารและผู้จัดการ</div>
+    </div>
+    
+    <div class="upload-section">
+        <label>นำเข้าข้อมูล:</label>
+        <div class="file-input-wrapper">
+            <label for="fileInput" class="file-btn">เลือกไฟล์ Excel (.xlsx)</label>
+            <input type="file" id="fileInput" accept=".xlsx">
+        </div>
+        <span class="file-name" id="fileName">ยังไม่ได้เลือกไฟล์</span>
+    </div>
+    
+    <div class="stats-bar" id="statsBar" style="display: none;">
+        <div class="stat-item"><span class="label">ผู้ตอบ:</span><span class="value" id="totalRespondents">0</span></div>
+        <div class="stat-item"><span class="label">คะแนนรวม:</span><span class="value" id="overallScore">0</span></div>
+        <div class="stat-item"><span class="label">มิติดีสุด:</span><span class="value" id="bestDimension">-</span></div>
+        <div class="stat-item"><span class="label">มิติต้องปรับปรุง:</span><span class="value" id="worstDimension">-</span></div>
+    </div>
+    
+    <div class="dashboard">
+        <div class="empty-state" id="emptyState">
+            <div class="icon">📊</div>
+            <p>กรุณานำเข้าไฟล์ Excel เพื่อแสดง Dashboard</p>
+        </div>
+        
+        <div class="bento-grid" id="bentoGrid" style="display: none;">
+            <div class="bento-card kpi">
+                <div class="kpi-value" id="kpiOverall">0.0</div>
+                <div class="kpi-label">คะแนน Engagement</div>
+            </div>
+            <div class="bento-card kpi">
+                <div class="kpi-value" id="kpiResponse">0</div>
+                <div class="kpi-label">จำนวนผู้ตอบ</div>
+            </div>
+            <div class="bento-card kpi">
+                <div class="kpi-value" id="kpiTopDimension">-</div>
+                <div class="kpi-label">มิติดีสุด</div>
+            </div>
+            <div class="bento-card kpi">
+                <div class="kpi-value" id="kpiLowDimension">-</div>
+                <div class="kpi-label">มิติต้องปรับปรุง</div>
+            </div>
+            
+            <div class="bento-card chart-wide">
+                <div class="card-title">ภาพรวม 7 มิติ</div>
+                <div class="dimension-grid" id="dimensionGrid"></div>
+            </div>
+            
+            <div class="bento-card chart">
+                <div class="card-title">Radar Chart</div>
+                <div class="chart-container"><canvas id="radarChart"></canvas></div>
+            </div>
+            
+            <div class="bento-card chart">
+                <div class="card-title">Bar Chart</div>
+                <div class="chart-container"><canvas id="barChart"></canvas></div>
+            </div>
+            
+            <div class="bento-card chart">
+                <div class="card-title">จุดแข็ง Top 5</div>
+                <div class="rank-list" id="strengthList"></div>
+            </div>
+            
+            <div class="bento-card chart">
+                <div class="card-title">ต้องปรับปรุง Top 5</div>
+                <div class="rank-list" id="improveList"></div>
+            </div>
+            
+            <div class="bento-card chart-wide">
+                <div class="card-title">Heatmap - คะแนนข้อ 1-35</div>
+                <div class="heatmap-grid" id="heatmapGrid"></div>
+            </div>
+            
+            <div class="bento-card chart">
+                <div class="card-title">คะแนนตามตำแหน่ง</div>
+                <div class="chart-container"><canvas id="positionChart"></canvas></div>
+            </div>
+            
+            <div class="bento-card chart">
+                <div class="card-title">การกระจายคะแนน</div>
+                <div class="chart-container"><canvas id="distributionChart"></canvas></div>
+            </div>
+            
+            <div class="bento-card full">
+                <div class="card-title">Insights และข้อเสนอแนะ</div>
+                <div class="insights-container" id="insightsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const DIMENSIONS = {
+        'องค์กร': { questions: [1,2,3,4,5], color: '#3949ab' },
+        'ผู้นำ': { questions: [6,7,8,9,10,11], color: '#00897b' },
+        'งาน': { questions: [12,13,14,15,16], color: '#43a047' },
+        'พัฒนา': { questions: [17,18,19,20,21], color: '#fb8c00' },
+        'สื่อสาร': { questions: [22,23,24,25], color: '#8e24aa' },
+        'สภาพแวด': { questions: [26,27,28,29,30], color: '#e53935' },
+        'ผลตอบแทน': { questions: [31,32,33,34,35], color: '#00acc1' }
+    };
+
+    let rawData = [];
+    let charts = {};
+
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        document.getElementById('fileName').textContent = file.name;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                rawData = XLSX.utils.sheet_to_json(sheet);
+                
+                console.log('Loaded rows:', rawData.length);
+                console.log('Columns:', Object.keys(rawData[0] || {}).slice(0, 10));
+                
+                processData();
+            } catch(err) {
+                console.error('Error:', err);
+                alert('Error: ' + err.message);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    function findCol(row, q) {
+        const keys = Object.keys(row);
+        for (let k of keys) {
+            if (k.includes('(' + q + ')') || k.includes('(' + q + ' ')) return k;
+        }
+        return null;
+    }
+
+    function processData() {
+        if (!rawData || rawData.length === 0) {
+            alert('No data found');
+            return;
+        }
+
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('bentoGrid').style.display = 'grid';
+        document.getElementById('statsBar').style.display = 'flex';
+
+        const dimScores = {};
+        const allScores = [];
+        const qScores = {};
+        
+        Object.keys(DIMENSIONS).forEach(d => dimScores[d] = []);
+
+        rawData.forEach(row => {
+            Object.keys(DIMENSIONS).forEach(dim => {
+                DIMENSIONS[dim].questions.forEach(q => {
+                    const col = findCol(row, q);
+                    if (col) {
+                        const val = row[col];
+                        if (typeof val === 'number' && val >= 1 && val <= 5) {
+                            dimScores[dim].push(val);
+                            allScores.push(val);
+                            if (!qScores[q]) qScores[q] = [];
+                            qScores[q].push(val);
+                        }
+                    }
+                });
+            });
+        });
+
+        console.log('Total scores:', allScores.length);
+        
+        if (allScores.length === 0) {
+            alert('No score data (1-5) found in file');
+            return;
+        }
+
+        const avgScores = {};
+        Object.keys(DIMENSIONS).forEach(dim => {
+            const s = dimScores[dim];
+            avgScores[dim] = s.length ? s.reduce((a,b) => a+b, 0) / s.length : 0;
+        });
+
+        const overall = allScores.reduce((a,b) => a+b, 0) / allScores.length;
+        
+        const sorted = Object.entries(avgScores).sort((a,b) => b[1] - a[1]);
+        const best = sorted[0] ? sorted[0][0] : '-';
+        const worst = sorted[sorted.length-1] ? sorted[sorted.length-1][0] : '-';
+
+        document.getElementById('totalRespondents').textContent = rawData.length;
+        document.getElementById('overallScore').textContent = overall.toFixed(2);
+        document.getElementById('bestDimension').textContent = best;
+        document.getElementById('worstDimension').textContent = worst;
+
+        document.getElementById('kpiOverall').textContent = overall.toFixed(2);
+        document.getElementById('kpiResponse').textContent = rawData.length;
+        document.getElementById('kpiTopDimension').textContent = best;
+        document.getElementById('kpiLowDimension').textContent = worst;
+
+        renderDimensionGrid(avgScores);
+        renderRadarChart(avgScores);
+        renderBarChart(avgScores);
+        renderHeatmap(qScores);
+        renderTopLists(qScores);
+        renderPositionChart();
+        renderDistributionChart(allScores);
+        generateInsights(avgScores, qScores, allScores);
+    }
+
+    function getColor(score) {
+        if (score >= 4.5) return '#2e7d32';
+        if (score >= 4.0) return '#558b2f';
+        if (score >= 3.5) return '#7cb342';
+        if (score >= 3.0) return '#f9a825';
+        if (score >= 2.5) return '#ef6c00';
+        return '#c62828';
+    }
+
+    function renderDimensionGrid(avgScores) {
+        const grid = document.getElementById('dimensionGrid');
+        grid.innerHTML = '';
+        Object.entries(avgScores).forEach(([dim, score]) => {
+            grid.innerHTML += `
+                <div class="dimension-item">
+                    <div class="dimension-score" style="color:${getColor(score)}">${score.toFixed(2)}</div>
+                    <div class="dimension-name">${dim}</div>
+                </div>`;
+        });
+    }
+
+    function renderRadarChart(avgScores) {
+        const ctx = document.getElementById('radarChart').getContext('2d');
+        if (charts.radar) charts.radar.destroy();
+        charts.radar = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: Object.keys(avgScores),
+                datasets: [{
+                    label: 'คะแนน',
+                    data: Object.values(avgScores).map(s => s.toFixed(2)),
+                    backgroundColor: 'rgba(57,73,171,0.2)',
+                    borderColor: '#3949ab',
+                    borderWidth: 2
+                }]
+            },
+            options: { scales: { r: { beginAtZero: true, max: 5 } } }
+        });
+    }
+
+    function renderBarChart(avgScores) {
+        const ctx = document.getElementById('barChart').getContext('2d');
+        if (charts.bar) charts.bar.destroy();
+        charts.bar = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(avgScores),
+                datasets: [{
+                    data: Object.values(avgScores).map(s => s.toFixed(2)),
+                    backgroundColor: Object.keys(avgScores).map(d => DIMENSIONS[d].color),
+                    borderRadius: 6
+                }]
+            },
+            options: { scales: { y: { beginAtZero: true, max: 5 } }, plugins: { legend: { display: false } } }
+        });
+    }
+
+    function renderHeatmap(qScores) {
+        const grid = document.getElementById('heatmapGrid');
+        grid.innerHTML = '';
+        for (let i = 1; i <= 35; i++) {
+            const s = qScores[i] || [];
+            const avg = s.length ? s.reduce((a,b) => a+b, 0) / s.length : 0;
+            grid.innerHTML += `
+                <div class="heatmap-item" style="background:${getColor(avg)}">
+                    <div class="heatmap-label">${i}</div>
+                    <div class="heatmap-value">${avg.toFixed(1)}</div>
+                </div>`;
+        }
+    }
+
+    function renderTopLists(qScores) {
+        const qAvgs = {};
+        for (let i = 1; i <= 35; i++) {
+            const s = qScores[i] || [];
+            if (s.length) qAvgs[i] = s.reduce((a,b) => a+b, 0) / s.length;
+        }
+        
+        const sorted = Object.entries(qAvgs).sort((a,b) => b[1] - a[1]);
+        const strengths = sorted.slice(0, 5);
+        const improve = sorted.slice(-5).reverse();
+        
+        document.getElementById('strengthList').innerHTML = strengths.map(([q, s], i) => 
+            `<div class="rank-item"><span class="rank-dimension">${i+1}. ข้อ ${q}</span><span class="rank-score" style="color:${getColor(s)}">${s.toFixed(2)}</span></div>`
+        ).join('');
+        
+        document.getElementById('improveList').innerHTML = improve.map(([q, s], i) => 
+            `<div class="rank-item"><span class="rank-dimension">${i+1}. ข้อ ${q}</span><span class="rank-score" style="color:${getColor(s)}">${s.toFixed(2)}</span></div>`
+        ).join('');
+    }
+
+    function renderPositionChart() {
+        const posScores = {};
+        rawData.forEach(row => {
+            const posKey = Object.keys(row).find(k => k.includes('ตำแหน่ง'));
+            if (posKey && row[posKey]) {
+                const pos = row[posKey];
+                if (!posScores[pos]) posScores[pos] = [];
+                Object.keys(DIMENSIONS).forEach(dim => {
+                    DIMENSIONS[dim].questions.forEach(q => {
+                        const col = findCol(row, q);
+                        if (col && typeof row[col] === 'number' && row[col] >= 1 && row[col] <= 5) {
+                            posScores[pos].push(row[col]);
+                        }
+                    });
+                });
+            }
+        });
+        
+        const posAvgs = {};
+        Object.entries(posScores).forEach(([pos, s]) => {
+            posAvgs[pos] = s.length ? s.reduce((a,b) => a+b, 0) / s.length : 0;
+        });
+        
+        const ctx = document.getElementById('positionChart').getContext('2d');
+        if (charts.position) charts.position.destroy();
+        charts.position = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(posAvgs),
+                datasets: [{ data: Object.values(posAvgs).map(s => s.toFixed(2)), backgroundColor: '#3949ab', borderRadius: 4 }]
+            },
+            options: { indexAxis: 'y', scales: { x: { beginAtZero: true, max: 5 } }, plugins: { legend: { display: false } } }
+        });
+    }
+
+    function renderDistributionChart(allScores) {
+        const dist = [0,0,0,0,0];
+        allScores.forEach(s => { const idx = Math.min(Math.floor(s)-1, 4); if (idx >= 0) dist[idx]++; });
+        
+        const ctx = document.getElementById('distributionChart').getContext('2d');
+        if (charts.dist) charts.dist.destroy();
+        charts.dist = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['1','2','3','4','5'],
+                datasets: [{ data: dist, backgroundColor: ['#c62828','#ef6c00','#f9a825','#7cb342','#2e7d32'] }]
+            },
+            options: { plugins: { legend: { position: 'right' } } }
+        });
+    }
+
+    function generateInsights(avgScores, qScores, allScores) {
+        const container = document.getElementById('insightsContainer');
+        
+        const sorted = Object.entries(avgScores).sort((a,b) => b[1] - a[1]);
+        const best = sorted[0];
+        const worst = sorted[sorted.length-1];
+        const overall = allScores.reduce((a,b) => a+b, 0) / allScores.length;
+        
+        const qAvgs = {};
+        for (let i = 1; i <= 35; i++) {
+            const s = qScores[i] || [];
+            if (s.length) qAvgs[i] = s.reduce((a,b) => a+b, 0) / s.length;
+        }
+        
+        const lowQ = Object.entries(qAvgs).filter(([q,s]) => s < 3.5).sort((a,b) => a[1]-b[1]).slice(0,3);
+        
+        const dist = [0,0,0,0,0];
+        allScores.forEach(s => { const idx = Math.min(Math.floor(s)-1,4); if(idx>=0) dist[idx]++; });
+        const posRate = (dist[3]+dist[4])/allScores.length*100;
+        const negRate = (dist[0]+dist[1])/allScores.length*100;
+        
+        let html = '<div class="insights-grid">';
+        
+        if (overall < 3.5) {
+            html += `<div class="insight-card danger"><div class="insight-card-title">⚠️ คะแนนต่ำ</div><div class="insight-card-text">รวม: <span class="insight-metric">${overall.toFixed(2)}</span> ต่ำกว่าเกณฑ์</div></div>`;
+        } else if (overall >= 4.0) {
+            html += `<div class="insight-card success"><div class="insight-card-title">✅ ดี</div><div class="insight-card-text">รวม: <span class="insight-metric">${overall.toFixed(2)}</span></div></div>`;
+        } else {
+            html += `<div class="insight-card warning"><div class="insight-card-title">🔔 ปานกลาง</div><div class="insight-card-text">รวม: <span class="insight-metric">${overall.toFixed(2)}</span></div></div>`;
+        }
+        
+        if (worst && worst[1] < 3.5) {
+            html += `<div class="insight-card warning"><div class="insight-card-title">🎯 ต้องปรับปรุง</div><div class="insight-card-text">${worst[0]}: <span class="insight-metric">${worst[1].toFixed(2)}</span></div></div>`;
+        }
+        
+        if (best && best[1] >= 4.5) {
+            html += `<div class="insight-card success"><div class="insight-card-title">⭐ จุดแข็ง</div><div class="insight-card-text">${best[0]}: <span class="insight-metric">${best[1].toFixed(2)}</span></div></div>`;
+        }
+        
+        html += `<div class="insight-card info"><div class="insight-card-title">📊 พึงพอใจ</div><div class="insight-card-text">4-5: <span class="insight-metric">${posRate.toFixed(1)}%</span> | 1-2: <span class="insight-metric">${negRate.toFixed(1)}%</span></div></div>`;
+        
+        html += '</div>';
+        
+        let recs = [];
+        if (worst && worst[1] < 3.5) {
+            recs.push({ title: 'ปรับปรุง ' + worst[0], desc: 'วางแผนพัฒนามิตินี้' });
+        }
+        if (lowQ.length > 0) {
+            recs.push({ title: 'ข้อที่ต้องแก้', desc: 'ข้อ ' + lowQ.map(q=>q[0]).join(', ') + ' มีคะแนนต่ำ' });
+        }
+        if (negRate > 20) {
+            recs.push({ title: 'ลดความไม่พึงพอใจ', desc: `${negRate.toFixed(1)}% ให้คะแนนต่ำ` });
+        }
+        if (best && best[1] >= 4.0) {
+            recs.push({ title: 'รักษาจุดแข็ง', desc: best[0] + ' ทำได้ดี' });
+        }
+        if (recs.length < 3) recs.push({ title: 'สร้าง Engagement', desc: 'กิจกรรมและสื่อสาร' });
+        
+        html += '<div class="recommendations-section"><div class="card-title">ข้อเสนอแนะ</div>';
+        recs.forEach((r, i) => {
+            html += `<div class="recommendation-item"><div class="recommendation-number">${i+1}</div><div><div class="recommendation-title">${r.title}</div><div class="recommendation-desc">${r.desc}</div></div></div>`;
+        });
+        html += '</div>';
+        
+        container.innerHTML = html;
+    }
+    </script>
+</body>
+</html>
